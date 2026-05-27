@@ -34,6 +34,22 @@ import { InputFilePubkeyUser } from "https://code4fukui.github.io/PubkeyUser/Inp
 const u = new PubkeyUser();
 
 const infile = new InputFilePubkeyUser(u);
+const usernameKey = "trybbs_name";
+let currentUser = null;
+
+const setCurrentUser = (user) => {
+  if (user?.name) {
+    currentUser = user;
+    localStorage.setItem(usernameKey, user.name);
+  }
+};
+
+const fetchCurrentUser = async () => {
+  const user = await u.fetch("user");
+  if (typeof user == "string") return null;
+  setCurrentUser(user);
+  return user;
+};
 
 const names = [
   "企業名", "代表者名", "住所", "HP", "事業内容",
@@ -90,13 +106,15 @@ const sendPost = async (body, parent = null, infile) => {
     return;
   }
   const files = infile ? await infile.getFiles() : undefined;
+  const user = currentUser || await fetchCurrentUser();
+  if (!user) return "not user";
 
   const id = TAI64N.stringify(TAI64N.encode(new Date()));
   const data = {
     id,
     parent,
     pubkey: u.pubkey,
-    name: "user1",
+    name: user.name,
     body,
     tags: ["test"],
     files,
@@ -185,6 +203,8 @@ const makePost = (post) => {
   };
   return div;
 };
+
+await fetchCurrentUser();
 
 btn_post.onclick = async (e) => {
   const body = ta_body.value;

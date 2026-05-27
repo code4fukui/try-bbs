@@ -50,6 +50,22 @@ const u = new PubkeyUser();
 const params = new URLSearchParams(window.location.search);
 const mail = params.get("mail");
 const uuid = params.get("uuid");
+const usernameKey = "trybbs_name";
+let currentUser = null;
+
+const setCurrentUser = (user) => {
+  if (user?.name) {
+    currentUser = user;
+    localStorage.setItem(usernameKey, user.name);
+  }
+};
+
+const fetchCurrentUser = async () => {
+  const user = await u.fetch("user");
+  if (typeof user == "string") return null;
+  setCurrentUser(user);
+  return user;
+};
 
 if (mail && uuid) {
   // 2. アドレスバーから ?token=... を消す
@@ -57,7 +73,10 @@ if (mail && uuid) {
   url.search = ""; // クエリ全削除
   window.history.replaceState(null, "", url.toString());
 
-  await u.fetch("login", { mail, uuid });
+  const user = await u.fetch("login", { mail, uuid });
+  setCurrentUser(user);
+} else {
+  await fetchCurrentUser();
 }
 
 let data = [];
@@ -98,11 +117,13 @@ const sendPost = async (body, parent = null, infile = null) => {
     return;
   }
   const files = infile ? await infile.getFiles() : undefined;
+  const user = currentUser || await fetchCurrentUser();
+  if (!user) return "not user";
   const data = {
     id,
     parent,
     pubkey: u.pubkey,
-    name: "user1",
+    name: user.name,
     body,
     tags: ["test"],
     files,

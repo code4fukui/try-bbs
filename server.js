@@ -9,6 +9,7 @@ import "https://deno.land/std@0.224.0/dotenv/load.ts"; // ?
 import { DateTime } from "https://js.sabae.cc/DateTime.js";
 import { IDChecker } from "https://code4fukui.github.io/IDChecker/IDChecker.js";
 import { EXT } from "https://code4fukui.github.io/EXT/EXT.js";
+import { Post } from "./static/Post.js";
 
 const idchecker = new IDChecker(Deno.env.get("ALLOWED_MAILADDRESS").split(","));
 
@@ -49,7 +50,10 @@ const api = async (path, param, pubkey) => {
     }
     */
     const post = param;
-    post.data.name = o.name;
+    if (!post?.data || !post?.sign) return "invalid post";
+    if (post.data.pubkey != pubkey) return "wrong post pubkey";
+    if (post.data.name != o.name) return "wrong post name";
+    if (!Post.verify(post)) return "wrong post sign";
     //console.log(post);
     const res = await posts.add(post);
     //console.log("res", res);
@@ -66,6 +70,10 @@ const api = async (path, param, pubkey) => {
     //console.log(lastdt);
     const latest = await posts.getLatest(lastdt);
     return latest;
+  } else if (path == "user") {
+    const o = await fs.loadJSON("sabae/pubkey/" + pubkey + ".json");
+    if (!o) return "not user";
+    return { name: o.name, mail: o.mail };
   } else if (path == "regist") {
     const mail = param.mail;
     if (!isValidEmail(mail)) return;
@@ -87,7 +95,7 @@ const api = async (path, param, pubkey) => {
     const o = await fs.loadJSON("sabae/user/" + param.mail + ".json");
     if (o.uuid != param.uuid) return "wrong uuid";
     await fs.saveJSON("sabae/pubkey/" + pubkey + ".json", o);
-    return true;
+    return { name: o.name, mail: o.mail };
   } else if (path == "upload") {
     const tid = TID.create();
     const ext = EXT.get(param.fn);
