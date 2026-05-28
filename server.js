@@ -32,6 +32,12 @@ ${url}
   await mailer.mail(param.mail, "鯖江商工会議所 企業の課題解決コンテスト", body);
 };
 
+const getErrorMessage = (e) => {
+  if (e instanceof Error) return e.message;
+  if (typeof e == "string") return e;
+  return JSON.stringify(e);
+};
+
 const fs = new FileStorage("./data");
 const fsfiles = new FileStorage("files");
 
@@ -88,7 +94,12 @@ const api = async (path, param, pubkey) => {
     param.uuid = UUID.create();
     param.dt = new DateTime().toString();
     await fs.saveJSON("sabae/user/" + param.mail + ".json", param);
-    await sendmail(param);
+    try {
+      await sendmail(param);
+    } catch (e) {
+      console.log("sendmail error", e);
+      return "メール送信に失敗しました: " + getErrorMessage(e);
+    }
     return "ok"; //param.tid;
   } else if (path == "login") {
     console.log("login", param, pubkey);
