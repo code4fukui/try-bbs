@@ -1,4 +1,7 @@
-import { DateTime, TimeZone } from "https://code4fukui.github.io/day-es/DateTime.js";
+import {
+  DateTime,
+  TimeZone,
+} from "https://code4fukui.github.io/day-es/DateTime.js";
 import { JSONLWriter } from "https://code4fukui.github.io/JSONL/JSONLWriter.js";
 import { JSONLReader } from "https://code4fukui.github.io/JSONL/JSONLReader.js";
 import { TAI64N } from "https://code4fukui.github.io/TAI64N-es/TAI64N.js";
@@ -10,7 +13,7 @@ import { CachedMap } from "https://code4fukui.github.io/CachedMap/CachedMap.js";
     yyyymmdd/
       id.cbor
     timeline.jsonl // { id }
-  
+
   cache map by id
   latest
 */
@@ -42,11 +45,11 @@ export class Posts {
       for (let i = 0; i < latest.length; i++) {
         latest[i] = await posts.get(latest[i]);
       }
-    //console.log("latest", latest);
-      
+      //console.log("latest", latest);
+
       return posts;
     } catch (e) {
-      console.log("no timeline data")
+      console.log("no timeline data");
     }
     return new Posts();
   }
@@ -54,6 +57,17 @@ export class Posts {
     await this.savePost(post);
     this.updateLatest(post);
     await this.updateTimeline(post);
+    return true;
+  }
+  async delete(id) {
+    const post = await this.get(id);
+    post.deleted = true;
+    await this.savePost(post);
+    this.cachedmap.set(id, post);
+    const idx = this.latest.findIndex((i) => i.data.id == id);
+    if (idx >= 0) {
+      this.latest[idx] = post;
+    }
     return true;
   }
   getPathFromID(id) {
@@ -81,7 +95,7 @@ export class Posts {
   }
   getLatest(lastdt = null) {
     if (!lastdt) lastdt = TAI64N.stringify(TAI64N.fromYear(0));
-    const res = this.latest.filter(i => i.data.id.localeCompare(lastdt) > 0);
+    const res = this.latest.filter((i) => i.data.id.localeCompare(lastdt) > 0);
     if (res.length) {
       //console.log(res, res.length, lastdt); // , res[0].data.id)
     }
@@ -89,10 +103,10 @@ export class Posts {
   }
   updateLatest(post) {
     //if (!post.data.parent) {
-      this.latest.unshift(post);
-      if (this.latest.length > LATEST_N) {
-        this.latest.length = LATEST_N;
-      }
+    this.latest.unshift(post);
+    if (this.latest.length > LATEST_N) {
+      this.latest.length = LATEST_N;
+    }
     //}
   }
   async updateTimeline(post) {

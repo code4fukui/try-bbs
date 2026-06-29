@@ -6,6 +6,8 @@
 deno serve --allow-import --allow-write --allow-read --allow-net --port 8080 --host "[::]" server.js
 ```
 
+管理者は `data/sabae/pubkey/{pubkey}.json` のユーザーデータに `admin: true` を追加して指定します。
+
 ## memo
 
 - インスタントURLで入る

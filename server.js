@@ -3,7 +3,7 @@ import { Posts } from "./Posts.js";
 import { FileStorage } from "https://code4fukui.github.io/FileStorage/FileStorage.js";
 import { TID } from "https://code4fukui.github.io/TID/TID.js";
 import { UUID } from "https://code4fukui.github.io/UUID/UUID.js";
-import { isValidEmail} from "https://code4fukui.github.io/validator/isValidEmail.js";
+import { isValidEmail } from "https://code4fukui.github.io/validator/isValidEmail.js";
 import { Gmailer } from "https://code4fukui.github.io/Gmailer/Gmailer.js";
 import "https://deno.land/std@0.224.0/dotenv/load.ts"; // ?
 import { DateTime } from "https://js.sabae.cc/DateTime.js";
@@ -19,7 +19,8 @@ const gmailc = Deno.env.get("GMAIL_ID_PASS").split("/");
 const mailer = new Gmailer(gmailc[0], gmailc[1]);
 const sendmail = async (param) => {
   //const url = "http://localhost:7001/?mail=" + param.mail + "&uuid=" + param.uuid;
-  const url = "https://try.sabae.cc/?mail=" + param.mail + "&uuid=" + param.uuid;
+  const url = "https://try.sabae.cc/?mail=" + param.mail + "&uuid=" +
+    param.uuid;
   const body = `${param.name}さま
 
 こんにちは、鯖江商工会議所です。
@@ -29,7 +30,11 @@ const sendmail = async (param) => {
 ${url}
 ※ このURLを他人に共有しないでください。
 `;
-  await mailer.mail(param.mail, "鯖江商工会議所 企業の課題解決コンテスト", body);
+  await mailer.mail(
+    param.mail,
+    "鯖江商工会議所 企業の課題解決コンテスト",
+    body,
+  );
 };
 
 const getErrorMessage = (e) => {
@@ -41,11 +46,23 @@ const getErrorMessage = (e) => {
 const fs = new FileStorage("./data");
 const fsfiles = new FileStorage("files");
 
+const isAdmin = (user) => {
+  return user?.admin === true;
+};
+
+const getUser = async (pubkey) => {
+  return await fs.loadJSON("sabae/pubkey/" + pubkey + ".json");
+};
+
+const getUserInfo = (user) => {
+  return { name: user.name, mail: user.mail, admin: isAdmin(user) };
+};
+
 const api = async (path, param, pubkey) => {
   //console.log("api", path, path == "add", param, pubkey)
   if (!pubkey) return "no pubkey";
   if (path == "add") {
-    const o = await fs.loadJSON("sabae/pubkey/" + pubkey + ".json");
+    const o = await getUser(pubkey);
     if (!o) return "not user";
     //console.log("add", path)
 
@@ -64,22 +81,37 @@ const api = async (path, param, pubkey) => {
     const res = await posts.add(post);
     //console.log("res", res);
     return res ? "ok" : "ng"; // res;
-  } else if (path == "get") {
-    const o = await fs.loadJSON("sabae/pubkey/" + pubkey + ".json");
+  } else if (path == "delete") {
+    const o = await getUser(pubkey);
     if (!o) return "not user";
+    if (!isAdmin(o)) return "not admin";
+    const id = typeof param == "string" ? param : param?.id;
+    if (!id) return "no id";
+    let post = null;
+    try {
+      post = await posts.get(id);
+    } catch (e) {
+      return "not found";
+    }
+    await posts.delete(id);
+    return "ok";
+  } else if (path == "get") {
+    const o = await getUser(pubkey);
+    if (!o) return "not user";
+    const id = typeof param == "string" ? param : param?.id;
     const p2 = await posts.get(id);
     return p2;
   } else if (path == "getLatest") {
-    const o = await fs.loadJSON("sabae/pubkey/" + pubkey + ".json");
+    const o = await getUser(pubkey);
     if (!o) return "not user";
     const lastdt = param;
     //console.log(lastdt);
     const latest = await posts.getLatest(lastdt);
     return latest;
   } else if (path == "user") {
-    const o = await fs.loadJSON("sabae/pubkey/" + pubkey + ".json");
+    const o = await getUser(pubkey);
     if (!o) return "not user";
-    return { name: o.name, mail: o.mail };
+    return getUserInfo(o);
   } else if (path == "regist") {
     const mail = param.mail;
     if (!isValidEmail(mail)) return;
@@ -106,7 +138,7 @@ const api = async (path, param, pubkey) => {
     const o = await fs.loadJSON("sabae/user/" + param.mail + ".json");
     if (o.uuid != param.uuid) return "wrong uuid";
     await fs.saveJSON("sabae/pubkey/" + pubkey + ".json", o);
-    return { name: o.name, mail: o.mail };
+    return getUserInfo(o);
   } else if (path == "upload") {
     const tid = TID.create();
     const ext = EXT.get(param.fn);
@@ -122,7 +154,7 @@ const api = async (path, param, pubkey) => {
     //return ret(bin, 200, ctype);
     return bin;
   } else {
-    console.log("path", path)
+    console.log("path", path);
     return "not found";
   }
 };
