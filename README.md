@@ -8,6 +8,20 @@ deno serve --allow-import --allow-write --allow-read --allow-net --port 8080 --h
 
 管理者は `data/sabae/pubkey/{pubkey}.json` のユーザーデータに `admin: true` を追加して指定します。
 
+## 登録者一覧のCSVエクスポート
+
+登録者情報をCSVに出力できます。引数を省略すると標準出力へ出力されます。
+
+```sh
+# ファイルに保存（Excelで開きやすいUTF-8 BOM付き）
+deno run --allow-read --allow-write export_users.js users.csv
+
+# 標準出力へ出力
+deno run --allow-read export_users.js > users.csv
+```
+
+CSVには「名前」「メールアドレス」「登録日時」を出力します。ログインに使うUUIDや内部IDは、漏えい防止のため出力しません。
+
 ## memo
 
 - インスタントURLで入る
